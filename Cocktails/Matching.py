@@ -5,8 +5,13 @@ import requests
 
 # the function get ingrdeint and match a random cocktail with the ingredient, which the user have all the ingredients
 def find_random_cocktail_by_ingredient(main_ingredient):
+    # standartize the input
+    main_ingredient = main_ingredient.lower()
+    main_ingredient = main_ingredient[0].upper() + main_ingredient[1:]
+
+    # get cocktails with the main ingredient as JSON data
     data = find_cocktails_by_ingredient(main_ingredient)
-    user_ingredients = []
+    user_ingredients = [] # get from the database
 
     for cocktail in data:
         details = get_cocktail_details(cocktail['idDrink'])
@@ -18,7 +23,15 @@ def find_random_cocktail_by_ingredient(main_ingredient):
             measure = details.get(f"strMeasure{i}")
             if ingredient and measure:
                 print(f"Ingredient {i}: {ingredient} - {measure}")
+            
+        # check if the user have all the ingredients
+        for ingredient in ingredients:
+            if ingredient not in user_ingredients:
+                break
+        
+        return details
 
+    return None
 
         # גישה לדאטה בייס לבדוק איזה מרכיבים יש למשתמש
         
