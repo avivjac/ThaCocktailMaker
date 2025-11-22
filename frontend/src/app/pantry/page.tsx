@@ -16,16 +16,21 @@ export default function PantryPage() {
   const { user, loading } = useAuth()
   const [pantry, setPantry] = useState<PantryRow[]>([])
   const [customName, setCustomName] = useState('')
-  const [ingredientId, setIngredientId] = useState<string>('') // אופציונלי
+  const [ingredientId, setIngredientId] = useState<string>('') // טקסט, נהפוך למספר
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [initialLoading, setInitialLoading] = useState(false)
 
   useEffect(() => {
-    if (!loading && user) fetchPantry()
+    if (!loading && user) {
+      setInitialLoading(true)
+      fetchPantry().finally(() => setInitialLoading(false))
+    }
   }, [loading, user])
 
   async function fetchPantry() {
     try {
+      setError(null)
       const data = await apiGet<{ pantry: PantryRow[] }>('/pantry')
       setPantry(data.pantry || [])
     } catch (e: any) {
@@ -34,15 +39,33 @@ export default function PantryPage() {
   }
 
   async function addOrUpdate() {
-    setBusy(true); setError(null)
+    // ולידציה בסיסית
+    if (!ingredientId.trim() && !customName.trim()) {
+      setError('צריך למלא או Ingredient ID או Custom name')
+      return
+    }
+
+    // אם יש אינגרידיינט – נוודא שהוא מספר תקין
+    let parsedId: number | undefined
+    if (ingredientId.trim()) {
+      parsedId = Number(ingredientId)
+      if (Number.isNaN(parsedId)) {
+        setError('Ingredient ID חייב להיות מספר')
+        return
+      }
+    }
+
+    setBusy(true)
+    setError(null)
     try {
       const payload = [
-        ingredientId
-          ? { ingredient_id: Number(ingredientId), has: true }
-          : { custom_name: customName, has: true }
+        parsedId !== undefined
+          ? { ingredient_id: parsedId, has: true }
+          : { custom_name: customName.trim(), has: true }
       ]
       await apiPut('/pantry', payload)
-      setCustomName(''); setIngredientId('')
+      setCustomName('')
+      setIngredientId('')
       await fetchPantry()
     } catch (e: any) {
       setError(e.message || 'Save failed')
@@ -88,19 +111,24 @@ export default function PantryPage() {
 
       {error && <p className="text-red-600 text-sm">{error}</p>}
 
-      <div className="grid gap-2">
-        {pantry.length === 0 && <p className="opacity-70">אין פריטים עדיין.</p>}
-        {pantry.map((row) => (
-          <div key={row.id} className="border rounded p-2 bg-white">
-            <div className="font-medium">
-              {row.custom_name || `Ingredient #${row.ingredient_id}`}
+      {initialLoading ? (
+        <p>טוען פריטים...</p>
+      ) : (
+        <div className="grid gap-2">
+          {pantry.length === 0 && <p className="opacity-70">אין פריטים עדיין.</p>}
+          {pantry.map((row) => (
+            <div key={row.id} className="border rounded p-2 bg-white">
+              <div className="font-medium">
+                {row.custom_name || `Ingredient #${row.ingredient_id}`}
+              </div>
+              <div className="text-xs opacity-70">
+                has: {String(row.has)}
+                {row.amount_ml ? ` • ${row.amount_ml} ml` : ''}
+              </div>
             </div>
-            <div className="text-xs opacity-70">
-              has: {String(row.has)}{row.amount_ml ? ` • ${row.amount_ml} ml` : ''}
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
