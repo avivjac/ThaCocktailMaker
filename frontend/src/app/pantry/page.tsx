@@ -32,6 +32,7 @@ export default function PantryPage() {
     try {
       setError(null)
       const data = await apiGet<{ pantry: PantryRow[] }>('/pantry')
+      console.log('Pantry data:', data) // לוג לצורך דיבוג
       setPantry(data.pantry || [])
     } catch (e: any) {
       setError(e.message || 'Load failed')

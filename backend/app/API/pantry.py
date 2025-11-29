@@ -11,10 +11,15 @@ def get_user_jwt(authorization: Optional[str] = Header(default=None)) -> str:
     return authorization.split(" ", 1)[1]
 
 @router.get("")
-def get_pantry(user_jwt: str = Depends(get_user_jwt)) -> Dict[str, Any]:
-    sb = get_user_client(user_jwt)
-    resp = sb.table("user_pantry").select("id, ingredient_id, custom_name, has, amount_ml").execute()
-    return {"pantry": resp.data or []}
+async def get_pantry(user_jwt: str = Depends(get_user_jwt)) -> Dict[str, Any]:
+    try:
+      pantry = await db.get_user_pantry(user_jwt)
+      return {"pantry": pantry}
+    except Exception as e:
+      raise HTTPException(status_code=500, detail=str(e))
+    # sb = get_user_client(user_jwt)
+    # resp = sb.table("user_pantry").select("id, ingredient_id, custom_name, has, amount_ml").execute()
+    # return {"pantry": resp.data or []}
 
 @router.put("")
 def upsert_pantry(
